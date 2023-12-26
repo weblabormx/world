@@ -1,0 +1,18 @@
+{
+    "name": "weblabormx/world",
+    "description": "Weblabor World API Wrapper Library for PHP",
+    "autoload": {
+        "psr-4": {
+            "WeblaborMx\\World\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Carlos Escobar",
+            "email": "carlosescobar@weblabor.mx"
+        }
+    ],
+    "require": {
+        "php": "^8.1"
+    }
+}
