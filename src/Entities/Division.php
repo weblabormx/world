@@ -16,16 +16,16 @@ class Division extends Entity implements Stringable
     protected array $children;
 
     public function __construct(
-        public readonly int $id,
-        public readonly ?string $name = null,
-        public readonly ?string $country = null,
-        public readonly ?string $a1code = null,
-        public readonly ?string $level = null,
-        public readonly ?int $population = null,
-        public readonly ?float $lat = null,
-        public readonly ?float $long = null,
-        public readonly ?string $timezone = null,
-        public readonly ?int $parent_id = null,
+        public int $id,
+        public ?string $name = null,
+        public ?string $country = null,
+        public ?string $a1code = null,
+        public ?string $level = null,
+        public ?int $population = null,
+        public ?float $lat = null,
+        public ?float $long = null,
+        public ?string $timezone = null,
+        public ?int $parent_id = null,
     ) {
     }
 
