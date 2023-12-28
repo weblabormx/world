@@ -26,6 +26,14 @@ class DivisionCast
             return $value;
         }
 
+        if (is_array($value)) {
+            try {
+                $value = Division::fromJson($value);
+            } catch (\Throwable $th) {
+                throw new InvalidArgumentException('Array is not a Division.');
+            }
+        }
+
         if (!$value instanceof Division) {
             throw new InvalidArgumentException('The given value is not a Division instance nor ID.');
         }
