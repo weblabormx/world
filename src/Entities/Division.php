@@ -2,6 +2,7 @@
 
 namespace WeblaborMx\World\Entities;
 
+use InvalidArgumentException;
 use Stringable;
 use WeblaborMx\World\Entity;
 use WeblaborMx\World\World;
@@ -93,6 +94,10 @@ class Division extends Entity implements Stringable
             $json = json_decode($json, true);
         }
 
+        if (is_null($json)) {
+            throw new InvalidArgumentException("Invalid JSON passed", 1);
+        }
+
         return new static(
             id: $json['id'],
             name: $json['name'] ?? null,
@@ -105,6 +110,29 @@ class Division extends Entity implements Stringable
             timezone: $json['timezone'] ?? null,
             parent_id: $json['parent_id'] ?? null,
         );
+    }
+
+    public function toJson(): string
+    {
+        return json_encode($this->toArray());
+    }
+
+    public function toArray(): array
+    {
+        $parent_id = isset($this->parent) ? $this->parent->id : $this->parent_id;
+
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'country' => $this->country,
+            'a1code' => $this->a1code,
+            'level' => $this->level,
+            'population' => $this->population,
+            'lat' => $this->lat,
+            'long' => $this->long,
+            'timezone' => $this->timezone,
+            ...array_filter(compact('parent_id'), fn ($v) => !is_null($v))
+        ];
     }
 
     /**
