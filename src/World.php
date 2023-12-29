@@ -18,6 +18,34 @@ class World
         );
     }
 
+    public static function call(
+        string $endpoint,
+        array $params = [],
+        string $action = 'GET',
+        array $body = [],
+    ) {
+        return self::getClient()->makeCall(
+            $endpoint,
+            $params,
+            $action,
+            $body
+        );
+    }
+
+    public static function safeCall(
+        string $endpoint,
+        array $params = [],
+        string $action = 'GET',
+        array $body = [],
+    ) {
+        return self::getClient()->makeSafeCall(
+            $endpoint,
+            $params,
+            $action,
+            $body
+        );
+    }
+
     public static function getClient()
     {
         if (!isset(self::$client)) {
@@ -29,11 +57,7 @@ class World
 
     public static function getApiKey()
     {
-        if (!isset(self::$client)) {
-            throw new Exception('Weblabor World API key not set.');
-        }
-
-        return self::$client->apiKey;
+        return self::getClient()->apiKey;
     }
 
     public static function setApiBase($apiBase)
