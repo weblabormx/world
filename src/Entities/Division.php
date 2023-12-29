@@ -7,6 +7,9 @@ use Stringable;
 use WeblaborMx\World\Entity;
 use WeblaborMx\World\World;
 
+/**
+ * @method self __setClient(\WeblaborMx\World\Client $client)
+ */
 class Division extends Entity implements Stringable
 {
     protected ?Division $parent;
@@ -34,6 +37,101 @@ class Division extends Entity implements Stringable
      * Endpoints
      */
 
+    /**
+     * Tries to get a division by ID
+     */
+    public static function get(int $id, ?string $search = null, ?array $fields = null): ?static
+    {
+        $result = World::safeCall(
+            "/division/{$id}",
+            array_filter(compact('search', 'fields'))
+        );
+
+        if (is_null($result)) {
+            return $result;
+        }
+
+        return self::fromJson($result)->__setClient(World::getClient());
+    }
+
+    public static function getChildren(int $id, ?array $fields = null): ?array
+    {
+        return array_map(
+            fn (Division $v) => $v->__setParent(null),
+            (new self($id))
+                ->__setClient(World::getClient())
+                ->children()
+        );
+    }
+
+    public static function getParent(int $id, ?array $fields = null): ?static
+    {
+        return (new self($id))
+            ->__setClient(World::getClient())
+            ->parent();
+    }
+
+    public static function search(string $search, int|Division|null $parent = null, ?array $fields = null)
+    {
+        if ($parent instanceof Division) {
+            $parent = $parent->id;
+        }
+
+        $result = World::safeCall(
+            implode('/', ['/search', $search, $parent]),
+            array_filter(compact('fields'))
+        );
+
+        if (is_null($result)) {
+            return $result;
+        }
+
+        return array_map(
+            fn (array $v) => self::fromJson($v)->__setClient(World::getClient()),
+            $result
+        );
+    }
+
+    public static function country(string $code, ?array $fields = null): ?static
+    {
+        $result = World::safeCall(
+            "/country/" . strtoupper($code),
+            array_filter(compact('fields'))
+        );
+
+        if (is_null($result)) {
+            return $result;
+        }
+
+        return self::fromJson($result)->__setClient(World::getClient());
+    }
+
+    /**
+     * Returns an array of all countries
+     * 
+     * @return Division[]|null
+     */
+    public static function countries(?array $fields = null): ?array
+    {
+        $result = World::call(
+            "/countries",
+            array_filter(compact('fields'))
+        );
+
+        if (is_null($result)) {
+            return $result;
+        }
+
+        return array_map(
+            fn (array $v) => self::fromJson($v)->__setClient(World::getClient()),
+            $result
+        );
+    }
+
+    /*
+     * Instance Endpoints
+     */
+
     public function parent(): ?static
     {
         if (isset($this->parent)) {
@@ -46,8 +144,8 @@ class Division extends Entity implements Stringable
                 : "/division/{$this->id}/parent"
         );
 
-        if (is_null($result)) {
-            return $result;
+        if (is_null($result) || empty($result)) {
+            return null;
         }
 
         $parent = self::fromJson($result);
@@ -62,7 +160,7 @@ class Division extends Entity implements Stringable
     /**
      * @return Division[]
      */
-    public function children(): array
+    public function children(): ?array
     {
         if (isset($this->children)) {
             return $this->children;
@@ -71,7 +169,7 @@ class Division extends Entity implements Stringable
         $result = $this->client->makeSafeCall("/division/{$this->id}/children");
 
         if (!$result) {
-            return [];
+            return null;
         }
 
         $children = array_map(
@@ -85,7 +183,7 @@ class Division extends Entity implements Stringable
     }
 
     /*
-     * Utils
+     * Castings
      */
 
     public static function fromJson(array|string $json): static
@@ -135,25 +233,11 @@ class Division extends Entity implements Stringable
         ];
     }
 
-    /**
-     * Tries to get a division by ID. Returns null on error.
+    /*
+     * Internal
      */
-    public static function get(int $id, ?string $search = null, ?array $fields = null): ?static
-    {
-        $result = World::getClient()
-            ->makeSafeCall(
-                "/division/{$id}",
-                array_filter(compact('search', 'fields'))
-            );
 
-        if (is_null($result)) {
-            return $result;
-        }
-
-        return self::fromJson($result)->__setClient(World::getClient());
-    }
-
-    public function __setParent(Division $division): self
+    public function __setParent(?Division $division): self
     {
         $this->parent = $division;
 
