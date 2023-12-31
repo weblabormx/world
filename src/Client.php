@@ -19,7 +19,10 @@ class Client
         array $body = [],
     ): array {
         $url = $this->parseUrl(rtrim($this->apiBase, '/') . '/' . trim($endpoint, '/'));
+
+        $params = array_filter(array_map(fn ($v) => is_array($v) ? implode(',', $v) : $v, $params));
         $url = !empty($params) ? $url . '?' . http_build_query($params) : $url;
+
         $ch = curl_init($url);
 
         $actions = [

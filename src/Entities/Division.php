@@ -60,7 +60,7 @@ class Division extends Entity implements Stringable
             fn (Division $v) => $v->__setParent(null),
             (new self($id))
                 ->__setClient(World::getClient())
-                ->children()
+                ->children($fields)
         );
     }
 
@@ -68,7 +68,7 @@ class Division extends Entity implements Stringable
     {
         return (new self($id))
             ->__setClient(World::getClient())
-            ->parent();
+            ->parent($fields);
     }
 
     public static function search(string $search, int|Division|null $parent = null, ?array $fields = null)
@@ -132,7 +132,7 @@ class Division extends Entity implements Stringable
      * Instance Endpoints
      */
 
-    public function parent(): ?static
+    public function parent(?array $fields = null): ?static
     {
         if (isset($this->parent)) {
             return $this->parent;
@@ -141,7 +141,8 @@ class Division extends Entity implements Stringable
         $result = $this->client->makeSafeCall(
             !is_null($this->parent_id)
                 ? "/division/{$this->parent_id}"
-                : "/division/{$this->id}/parent"
+                : "/division/{$this->id}/parent",
+            compact('fields')
         );
 
         if (is_null($result) || empty($result)) {
@@ -160,13 +161,13 @@ class Division extends Entity implements Stringable
     /**
      * @return Division[]
      */
-    public function children(): ?array
+    public function children(?array $fields = null): ?array
     {
         if (isset($this->children)) {
             return $this->children;
         }
 
-        $result = $this->client->makeSafeCall("/division/{$this->id}/children");
+        $result = $this->client->makeSafeCall("/division/{$this->id}/children", compact('fields'));
 
         if (!$result) {
             return null;
