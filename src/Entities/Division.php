@@ -56,11 +56,17 @@ class Division extends Entity implements Stringable
 
     public static function getChildren(int $id, ?array $fields = null): ?array
     {
+        $children = (new self($id))
+            ->__setClient(World::getClient())
+            ->children($fields);
+
+        if (is_null($children)) {
+            return $children;
+        }
+
         return array_map(
             fn (Division $v) => $v->__setParent(null),
-            (new self($id))
-                ->__setClient(World::getClient())
-                ->children($fields) ?? []
+            $children
         );
     }
 
