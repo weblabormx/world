@@ -60,7 +60,7 @@ class Division extends Entity implements Stringable
             fn (Division $v) => $v->__setParent(null),
             (new self($id))
                 ->__setClient(World::getClient())
-                ->children($fields)
+                ->children($fields) ?? []
         );
     }
 
@@ -159,7 +159,7 @@ class Division extends Entity implements Stringable
     }
 
     /**
-     * @return Division[]
+     * @return Division[]|null
      */
     public function children(?array $fields = null): ?array
     {
