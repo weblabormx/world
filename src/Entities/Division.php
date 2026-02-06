@@ -238,6 +238,6 @@ class Division extends Entity implements Stringable
 
     public function __toString(): string
     {
-        return $this->id;
+        return $this->name;
     }
 }
