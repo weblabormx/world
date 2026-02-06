@@ -65,7 +65,6 @@ class Client
         if (is_null($response)) {
             throw $exception;
         }
-
         return $response;
     }
 

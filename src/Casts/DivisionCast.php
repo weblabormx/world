@@ -16,7 +16,6 @@ class DivisionCast
         if (!$this->isInt($value)) {
             return null;
         }
-
         return Division::get($value);
     }
 
@@ -25,7 +24,6 @@ class DivisionCast
         if (is_null($value) || $this->isInt($value)) {
             return $value;
         }
-
         if (is_array($value)) {
             try {
                 $value = Division::fromJson($value);
@@ -37,7 +35,6 @@ class DivisionCast
         if (!$value instanceof Division) {
             throw new InvalidArgumentException('The given value is not a Division instance nor ID.');
         }
-
         return $value->id;
     }
 
@@ -49,18 +46,15 @@ class DivisionCast
         if (is_integer($value)) {
             return true;
         }
-
         if (!is_numeric($value)) {
             return false;
         }
 
         preg_match("/^\d+$/", trim($value), $match);
-
         if (isset($match[0])) {
             $value = intval($match[0]);
             return true;
         }
-
         return false;
     }
 }

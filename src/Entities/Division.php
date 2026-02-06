@@ -59,11 +59,9 @@ class Division extends Entity implements Stringable
         $children = (new self($id))
             ->__setClient(World::getClient())
             ->children($fields);
-
         if (is_null($children)) {
             return $children;
         }
-
         return array_map(
             fn (Division $v) => $v->__setParent(null),
             $children
@@ -87,11 +85,9 @@ class Division extends Entity implements Stringable
             implode('/', ['/search', $search, $parent]),
             array_filter(compact('fields'))
         );
-
         if (is_null($result)) {
             return $result;
         }
-
         return array_map(
             fn (array $v) => self::fromJson($v)->__setClient(World::getClient()),
             $result
@@ -108,7 +104,6 @@ class Division extends Entity implements Stringable
         if (is_null($result)) {
             return $result;
         }
-
         return self::fromJson($result)->__setClient(World::getClient());
     }
 
@@ -127,7 +122,6 @@ class Division extends Entity implements Stringable
         if (is_null($result)) {
             return $result;
         }
-
         return array_map(
             fn (array $v) => self::fromJson($v)->__setClient(World::getClient()),
             $result
@@ -150,17 +144,13 @@ class Division extends Entity implements Stringable
                 : "/division/{$this->id}/parent",
             compact('fields')
         );
-
         if (is_null($result) || empty($result)) {
             return null;
         }
 
         $parent = self::fromJson($result);
-
         $parent->__setClient($this->client);
-
         $this->__setParent($parent);
-
         return $parent;
     }
 
@@ -178,14 +168,12 @@ class Division extends Entity implements Stringable
         if (!$result) {
             return null;
         }
-
         $children = array_map(
             fn ($v) => self::fromJson($v)
                 ->__setParent($this)
                 ->__setClient($this->client),
             $result
         );
-
         return $this->children = $children;
     }
 
@@ -198,7 +186,6 @@ class Division extends Entity implements Stringable
         if (is_string($json)) {
             $json = json_decode($json, true);
         }
-
         if (is_null($json)) {
             throw new InvalidArgumentException("Invalid JSON passed", 1);
         }
@@ -225,7 +212,6 @@ class Division extends Entity implements Stringable
     public function toArray(): array
     {
         $parent_id = isset($this->parent) ? $this->parent->id : $this->parent_id;
-
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -247,7 +233,6 @@ class Division extends Entity implements Stringable
     public function __setParent(?Division $division): self
     {
         $this->parent = $division;
-
         return $this;
     }
 
