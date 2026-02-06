@@ -42,16 +42,16 @@ class Division extends Entity implements Stringable
      */
     public static function get(int $id, ?string $search = null, ?array $fields = null): ?static
     {
-        $result = World::safeCall(
-            "/division/{$id}",
-            array_filter(compact('search', 'fields'))
-        );
-
-        if (is_null($result)) {
-            return $result;
-        }
-
-        return self::fromJson($result)->__setClient(World::getClient());
+        return cache()->remember("wdivision_{$id}_" . ($search ?? 'no-search') . "_" . (is_null($fields) ? 'no-fields' : implode(',', $fields)), now()->addDay(), function () use ($id, $search, $fields) {
+            $result = World::safeCall(
+                "/division/{$id}",
+                array_filter(compact('search', 'fields'))
+            );
+            if (is_null($result)) {
+                return $result;
+            }
+            return self::fromJson($result)->__setClient(World::getClient());
+        });
     }
 
     public static function getChildren(int $id, ?array $fields = null): ?array
