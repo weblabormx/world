@@ -2,6 +2,8 @@
 
 namespace WeblaborMx\World\Entities;
 
+use Exception;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Stringable;
 use WeblaborMx\World\Entity;
@@ -125,13 +127,17 @@ class Division extends Entity implements Stringable
             return $cached;
         }
 
-        $result = World::safeCall("/countries", array_filter(compact('fields')));
+        try {
+            $result = World::safeCall("/countries", array_filter(compact('fields')));
+        } catch (Exception $e) {
+            Log::warning('Division::countries() — World API client is not configured: ' . $e->getMessage());
+            $result = null;
+        }
 
         if (!is_null($result)) {
-            $mapped = array_map(
-                fn (array $v) => self::fromJson($v)->__setClient(World::getClient()),
-                $result
-            );
+            $mapped = collect($result)->map(function ($v) {
+                return self::fromJson($v)->__setClient(World::getClient());
+            })->all();
             cache()->put($cacheKey, $mapped, now()->addDay());
             cache()->put($cacheKey . '_fallback', $mapped);
             return $mapped;

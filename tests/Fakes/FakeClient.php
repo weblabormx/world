@@ -3,6 +3,7 @@
 namespace WeblaborMx\World\Tests\Fakes;
 
 use Exception;
+use Throwable;
 use WeblaborMx\World\Client;
 
 class FakeClient extends Client
@@ -21,13 +22,22 @@ class FakeClient extends Client
         $this->responses[] = $response;
     }
 
+    public function addException(Throwable $e): void
+    {
+        $this->responses[] = $e;
+    }
+
     public function makeSafeCall(string $endpoint, array $params = [], string $action = 'GET', array $body = []): ?array
     {
         $this->callCount++;
         if (empty($this->responses)) {
             return null;
         }
-        return array_shift($this->responses);
+        $response = array_shift($this->responses);
+        if ($response instanceof Throwable) {
+            throw $response;
+        }
+        return $response;
     }
 
     public function makeCall(string $endpoint, array $params = [], string $action = 'GET', array $body = []): array

@@ -2,7 +2,10 @@
 
 namespace WeblaborMx\World\Tests\Unit\Division;
 
+use Exception;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Mockery;
 use Orchestra\Testbench\TestCase;
 use ReflectionClass;
 use WeblaborMx\World\Entities\Division;
@@ -100,5 +103,39 @@ class CountriesTest extends TestCase
         $result = Division::countries();
 
         $this->assertSame([], $result);
+    }
+
+    public function test_returns_empty_array_when_client_not_configured_and_no_cache_exists(): void
+    {
+        Log::shouldReceive('warning')->once()->with(
+            Mockery::on(function ($message) {
+                return str_contains($message, 'not configured');
+            })
+        );
+        $this->client->addException(new Exception('Weblabor World API key not set.'));
+
+        $result = Division::countries();
+
+        $this->assertSame([], $result);
+    }
+
+    public function test_returns_fallback_cache_when_client_not_configured(): void
+    {
+        $this->client->addResponse([self::$mexicoData]);
+        Division::countries();
+        Cache::forget('wdivision_countries_no-fields');
+
+        Log::shouldReceive('warning')->once()->with(
+            Mockery::on(function ($message) {
+                return str_contains($message, 'not configured');
+            })
+        );
+        $this->client->addException(new Exception('Weblabor World API key not set.'));
+
+        $result = Division::countries();
+
+        $this->assertIsArray($result);
+        $this->assertCount(1, $result);
+        $this->assertSame('Mexico', $result[0]->name);
     }
 }
