@@ -2,6 +2,8 @@
 
 namespace WeblaborMx\World\Entities;
 
+use Exception;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Stringable;
 use WeblaborMx\World\Entity;
@@ -108,24 +110,45 @@ class Division extends Entity implements Stringable
     }
 
     /**
-     * Returns an array of all countries
-     * 
-     * @return Division[]|null
+     * Returns an array of all countries.
+     *
+     * Strategy: fresh cache (1 day TTL) → API → fallback cache (no TTL) → empty array.
+     * The fallback key survives TTL expiry so that a stale result is returned instead of
+     * throwing when the remote API is temporarily unavailable.
+     *
+     * @return Division[]
      */
-    public static function countries(?array $fields = null): ?array
+    public static function countries(?array $fields = null): array
     {
-        $result = World::call(
-            "/countries",
-            array_filter(compact('fields'))
-        );
+        $cacheKey = 'wdivision_countries_' . (is_null($fields) ? 'no-fields' : implode(',', $fields));
 
-        if (is_null($result)) {
-            return $result;
+        $cached = cache()->get($cacheKey);
+        if (!is_null($cached)) {
+            return $cached;
         }
-        return array_map(
-            fn (array $v) => self::fromJson($v)->__setClient(World::getClient()),
-            $result
-        );
+
+        try {
+            $result = World::safeCall("/countries", array_filter(compact('fields')));
+        } catch (Exception $e) {
+            Log::warning('Division::countries() — World API client is not configured: ' . $e->getMessage());
+            $result = null;
+        }
+
+        if (!is_null($result)) {
+            $mapped = collect($result)->map(function ($v) {
+                return self::fromJson($v)->__setClient(World::getClient());
+            })->all();
+            cache()->put($cacheKey, $mapped, now()->addDay());
+            cache()->put($cacheKey . '_fallback', $mapped);
+            return $mapped;
+        }
+
+        $stale = cache()->get($cacheKey . '_fallback');
+        if (!is_null($stale)) {
+            return $stale;
+        }
+
+        return [];
     }
 
     /*
