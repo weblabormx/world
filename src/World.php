@@ -55,6 +55,11 @@ class World
         return self::$client;
     }
 
+    public static function setClient(Client $client): void
+    {
+        self::$client = $client;
+    }
+
     public static function getApiKey()
     {
         return self::getClient()->apiKey;
