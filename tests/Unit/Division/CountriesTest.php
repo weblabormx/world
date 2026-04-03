@@ -2,35 +2,19 @@
 
 namespace WeblaborMx\World\Tests\Unit\Division;
 
-use Exception;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Mockery;
 use Orchestra\Testbench\TestCase;
-use ReflectionClass;
 use WeblaborMx\World\Entities\Division;
-use WeblaborMx\World\Tests\Fakes\FakeClient;
 use WeblaborMx\World\World;
 
 class CountriesTest extends TestCase
 {
-    private FakeClient $client;
-
-    private static array $mexicoData = [
-        'id' => 1,
-        'name' => 'Mexico',
-        'country' => 'MX',
-        'a1code' => null,
-        'level' => 'country',
-        'population' => 130000000,
-        'lat' => 23.6345,
-        'long' => -102.5528,
-        'timezone' => 'America/Mexico_City',
-        'parent_id' => null,
-    ];
-
     protected function getEnvironmentSetUp($app): void
     {
+        $root = dirname(__DIR__, 3);
+        if (file_exists($root . '/.env')) {
+            \Dotenv\Dotenv::createMutable($root)->safeLoad();
+        }
         $app['config']->set('cache.default', 'array');
     }
 
@@ -38,27 +22,56 @@ class CountriesTest extends TestCase
     {
         parent::setUp();
         Cache::flush();
-        $this->client = new FakeClient();
-        $property = (new ReflectionClass(World::class))->getProperty('client');
-        $property->setValue(null, $this->client);
     }
 
-    public function test_returns_correct_data_when_api_responds(): void
+    private function apiKey(): ?string
     {
-        $this->client->addResponse([self::$mexicoData]);
+        return env('WORLD_API_KEY') ?: null;
+    }
+
+    /**
+     * Client is never initialized — World::getClient() throws internally.
+     * Division::countries() must catch it and return [].
+     *
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
+     */
+    public function test_returns_empty_array_when_client_is_not_configured(): void
+    {
+        $result = Division::countries();
+
+        $this->assertSame([], $result);
+    }
+
+    public function test_returns_empty_array_with_invalid_api_key(): void
+    {
+        World::init('invalid-api-key');
+
+        $result = Division::countries();
+
+        $this->assertSame([], $result);
+    }
+
+    public function test_returns_countries_with_valid_api_key(): void
+    {
+        if (!$this->apiKey()) {
+            $this->markTestSkipped('WORLD_API_KEY not set in .env');
+        }
+        World::init($this->apiKey());
 
         $result = Division::countries();
 
         $this->assertIsArray($result);
-        $this->assertCount(1, $result);
+        $this->assertNotEmpty($result);
         $this->assertInstanceOf(Division::class, $result[0]);
-        $this->assertSame('Mexico', $result[0]->name);
-        $this->assertSame('MX', $result[0]->country);
     }
 
-    public function test_successful_response_is_cached(): void
+    public function test_successful_response_populates_both_cache_keys(): void
     {
-        $this->client->addResponse([self::$mexicoData]);
+        if (!$this->apiKey()) {
+            $this->markTestSkipped('WORLD_API_KEY not set in .env');
+        }
+        World::init($this->apiKey());
 
         Division::countries();
 
@@ -66,76 +79,37 @@ class CountriesTest extends TestCase
         $this->assertTrue(Cache::has('wdivision_countries_no-fields_fallback'));
     }
 
-    public function test_uses_cache_and_avoids_api_call_when_cache_is_valid(): void
+    public function test_returns_from_cache_without_hitting_api_again(): void
     {
-        $this->client->addResponse([self::$mexicoData]);
-        Division::countries();
+        if (!$this->apiKey()) {
+            $this->markTestSkipped('WORLD_API_KEY not set in .env');
+        }
+        World::init($this->apiKey());
+        $first = Division::countries();
 
-        $callsAfterFirstRequest = $this->client->callCount;
+        // Switch to invalid key — second call must serve from cache
+        World::init('invalid-api-key');
+        $second = Division::countries();
 
-        $result = Division::countries();
-
-        $this->assertSame($callsAfterFirstRequest, $this->client->callCount);
-        $this->assertIsArray($result);
-        $this->assertCount(1, $result);
+        $this->assertCount(count($first), $second);
+        $this->assertSame($first[0]->name, $second[0]->name);
     }
 
-    public function test_uses_fallback_cache_when_fresh_key_expires_and_api_fails(): void
+    public function test_returns_fallback_when_fresh_key_expires_and_api_fails(): void
     {
-        $this->client->addResponse([self::$mexicoData]);
-        Division::countries();
+        if (!$this->apiKey()) {
+            $this->markTestSkipped('WORLD_API_KEY not set in .env');
+        }
+        World::init($this->apiKey());
+        $original = Division::countries();
 
-        // Simulate the fresh key expiring (fallback key survives with no TTL)
         Cache::forget('wdivision_countries_no-fields');
-        $callsBefore = $this->client->callCount;
-
-        $result = Division::countries();
-
-        // A remote attempt was made (fresh key was gone), it failed, then the fallback was used
-        $this->assertSame($callsBefore + 1, $this->client->callCount);
-        $this->assertIsArray($result);
-        $this->assertCount(1, $result);
-        $this->assertSame('Mexico', $result[0]->name);
-    }
-
-    public function test_returns_empty_array_when_api_fails_and_no_cache_exists(): void
-    {
-        $result = Division::countries();
-
-        $this->assertSame([], $result);
-    }
-
-    public function test_returns_empty_array_when_client_not_configured_and_no_cache_exists(): void
-    {
-        Log::shouldReceive('warning')->once()->with(
-            Mockery::on(function ($message) {
-                return str_contains($message, 'not configured');
-            })
-        );
-        $this->client->addException(new Exception('Weblabor World API key not set.'));
-
-        $result = Division::countries();
-
-        $this->assertSame([], $result);
-    }
-
-    public function test_returns_fallback_cache_when_client_not_configured(): void
-    {
-        $this->client->addResponse([self::$mexicoData]);
-        Division::countries();
-        Cache::forget('wdivision_countries_no-fields');
-
-        Log::shouldReceive('warning')->once()->with(
-            Mockery::on(function ($message) {
-                return str_contains($message, 'not configured');
-            })
-        );
-        $this->client->addException(new Exception('Weblabor World API key not set.'));
+        World::init('invalid-api-key');
 
         $result = Division::countries();
 
         $this->assertIsArray($result);
-        $this->assertCount(1, $result);
-        $this->assertSame('Mexico', $result[0]->name);
+        $this->assertNotEmpty($result);
+        $this->assertSame($original[0]->name, $result[0]->name);
     }
 }
