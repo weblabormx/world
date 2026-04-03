@@ -116,7 +116,7 @@ class Division extends Entity implements Stringable
      *
      * @return Division[]
      */
-    public static function countries(?array $fields = null): ?array
+    public static function countries(?array $fields = null): array
     {
         $cacheKey = 'wdivision_countries_' . (is_null($fields) ? 'no-fields' : implode(',', $fields));
 

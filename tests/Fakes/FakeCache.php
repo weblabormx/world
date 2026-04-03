@@ -27,6 +27,7 @@ class FakeCache
 
     public function remember(string $key, mixed $ttl, callable $callback): mixed
     {
+        // TTL is intentionally ignored; this fake tests cache-hit behavior, not expiry timing
         if (!array_key_exists($key, $this->store)) {
             $this->store[$key] = $callback();
         }
@@ -38,6 +39,7 @@ class FakeCache
         return array_key_exists($key, $this->store) ? $this->store[$key] : $default;
     }
 
+    // TTL is intentionally ignored; all puts persist until reset() or forget()
     public function put(string $key, mixed $value, mixed $ttl = null): bool
     {
         $this->store[$key] = $value;
