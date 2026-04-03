@@ -2,6 +2,7 @@
 
 namespace WeblaborMx\World\Tests\Fakes;
 
+use Exception;
 use WeblaborMx\World\Client;
 
 class FakeClient extends Client
@@ -33,7 +34,7 @@ class FakeClient extends Client
     {
         $result = $this->makeSafeCall($endpoint, $params, $action, $body);
         if (is_null($result)) {
-            throw new \Exception("FakeClient: no response queued for '$endpoint'");
+            throw new Exception("FakeClient: no response queued for '$endpoint'");
         }
         return $result;
     }

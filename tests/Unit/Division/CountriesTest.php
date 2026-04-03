@@ -2,9 +2,10 @@
 
 namespace WeblaborMx\World\Tests\Unit\Division;
 
-use PHPUnit\Framework\TestCase;
+use Illuminate\Support\Facades\Cache;
+use Orchestra\Testbench\TestCase;
+use ReflectionClass;
 use WeblaborMx\World\Entities\Division;
-use WeblaborMx\World\Tests\Fakes\FakeCache;
 use WeblaborMx\World\Tests\Fakes\FakeClient;
 use WeblaborMx\World\World;
 
@@ -25,11 +26,18 @@ class CountriesTest extends TestCase
         'parent_id' => null,
     ];
 
+    protected function getEnvironmentSetUp($app): void
+    {
+        $app['config']->set('cache.default', 'array');
+    }
+
     protected function setUp(): void
     {
-        FakeCache::reset();
+        parent::setUp();
+        Cache::flush();
         $this->client = new FakeClient();
-        World::setClient($this->client);
+        $property = (new ReflectionClass(World::class))->getProperty('client');
+        $property->setValue(null, $this->client);
     }
 
     public function test_returns_correct_data_when_api_responds(): void
@@ -51,9 +59,8 @@ class CountriesTest extends TestCase
 
         Division::countries();
 
-        $cache = FakeCache::instance();
-        $this->assertArrayHasKey('wdivision_countries_no-fields', $cache->store);
-        $this->assertArrayHasKey('wdivision_countries_no-fields_fallback', $cache->store);
+        $this->assertTrue(Cache::has('wdivision_countries_no-fields'));
+        $this->assertTrue(Cache::has('wdivision_countries_no-fields_fallback'));
     }
 
     public function test_uses_cache_and_avoids_api_call_when_cache_is_valid(): void
@@ -70,14 +77,19 @@ class CountriesTest extends TestCase
         $this->assertCount(1, $result);
     }
 
-    public function test_uses_stale_cache_when_api_fails_and_fallback_exists(): void
+    public function test_uses_fallback_cache_when_fresh_key_expires_and_api_fails(): void
     {
-        $cachedDivision = Division::fromJson(self::$mexicoData)->__setClient($this->client);
-        $cache = FakeCache::instance();
-        $cache->put('wdivision_countries_no-fields_fallback', [$cachedDivision]);
+        $this->client->addResponse([self::$mexicoData]);
+        Division::countries();
+
+        // Simulate the fresh key expiring (fallback key survives with no TTL)
+        Cache::forget('wdivision_countries_no-fields');
+        $callsBefore = $this->client->callCount;
 
         $result = Division::countries();
 
+        // A remote attempt was made (fresh key was gone), it failed, then the fallback was used
+        $this->assertSame($callsBefore + 1, $this->client->callCount);
         $this->assertIsArray($result);
         $this->assertCount(1, $result);
         $this->assertSame('Mexico', $result[0]->name);
